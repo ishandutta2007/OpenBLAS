@@ -63,7 +63,7 @@ typedef struct{
 
 /* We need this global for checking if initialization is finished.   */
 int blas_server_avail = 0;
-
+int blas_omp_threads_local = 1;
 /* Local Variables */
 static BLASULONG server_lock       = 0;
 

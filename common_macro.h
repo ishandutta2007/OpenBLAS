@@ -70,6 +70,7 @@
 #define	SUM_K			QSUM_K
 #define	SWAP_K			QSWAP_K
 #define	ROT_K			QROT_K
+#define	ROTM_K			QROTM_K
 
 #define	GEMV_N			QGEMV_N
 #define	GEMV_T			QGEMV_T
@@ -361,6 +362,7 @@
 #define	SUM_K			DSUM_K
 #define	SWAP_K			DSWAP_K
 #define	ROT_K			DROT_K
+#define ROTM_K      DROTM_K
 
 #define	GEMV_N			DGEMV_N
 #define	GEMV_T			DGEMV_T
@@ -977,6 +979,7 @@
 #define	SUM_K			SSUM_K
 #define	SWAP_K			SSWAP_K
 #define	ROT_K			SROT_K
+#define	ROTM_K			SROTM_K
 
 #define	GEMV_N			SGEMV_N
 #define	GEMV_T			SGEMV_T
@@ -2655,8 +2658,19 @@ typedef struct {
   BLASLONG prea, preb, prec, pred;
 #endif
 
+
+  //for gemm_batch
+  void * routine;
+  int routine_mode;
+
 } blas_arg_t;
 #endif
+
+#ifdef SMALL_MATRIX_OPT
+#define BLAS_SMALL_OPT  0x10000U
+#define BLAS_SMALL_B0_OPT  0x30000U
+#endif
+
 
 #ifdef XDOUBLE
 

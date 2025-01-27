@@ -275,6 +275,7 @@ extern gotoblas_t  gotoblas_EXCAVATOR;
 #define gotoblas_SKYLAKEX gotoblas_SANDYBRIDGE
 #define gotoblas_COOPERLAKE gotoblas_SANDYBRIDGE
 #define gotoblas_ZEN gotoblas_SANDYBRIDGE
+#define gotoblas_SAPPHIRERAPIDS gotoblas_SANDYBRIDGE
 #else
 extern gotoblas_t  gotoblas_HASWELL;
 extern gotoblas_t  gotoblas_ZEN;
@@ -926,6 +927,7 @@ static gotoblas_t *get_coretype(void){
 	case 0x7:
       switch (exmodel) {
       case 5:
+      case 6:
         if (support_avx2())
           return &gotoblas_ZEN;
         else

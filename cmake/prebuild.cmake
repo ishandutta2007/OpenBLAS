@@ -58,7 +58,7 @@ set(TARGET_CONF_TEMP "${PROJECT_BINARY_DIR}/${TARGET_CONF}.tmp")
 
 # c_check
 set(FU "")
-if (APPLE OR (MSVC AND NOT ${CMAKE_C_COMPILER_ID} MATCHES "Clang"))
+if (APPLE OR (MSVC AND NOT (${CMAKE_C_COMPILER_ID} MATCHES "Clang" OR ${CMAKE_C_COMPILER_ID} MATCHES "IntelLLVM")))
   set(FU "_")
 endif()
 if(MINGW AND NOT MINGW64)
@@ -932,7 +932,7 @@ endif ()
     set(ZGEMM_UNROLL_M 4)
     set(ZGEMM_UNROLL_N 4)
     set(SYMV_P 16)
-  elseif ("${TCORE}" STREQUAL "CORTEXA72" OR "${TCORE}" STREQUAL "CORTEXA73")
+  elseif ("${TCORE}" STREQUAL "CORTEXA72" OR "${TCORE}" STREQUAL "CORTEXA73" OR "${TCORE}" STREQUAL "CORTEXA76")
     file(APPEND ${TARGET_CONF_TEMP}
       "#define L1_CODE_SIZE\t49152\n"
       "#define L1_CODE_LINESIZE\t64\n"
@@ -1218,6 +1218,37 @@ endif ()
     set(ZGEMM_UNROLL_M 4)
     set(ZGEMM_UNROLL_N 4)
     set(SYMV_P 16)
+  elseif ("${TCORE}" STREQUAL "A64FX")
+    file(APPEND ${TARGET_CONF_TEMP}
+      "#define L1_CODE_SIZE\t65536\n"
+      "#define L1_CODE_LINESIZE\t256\n"
+      "#define L1_CODE_ASSOCIATIVE\t8\n"
+      "#define L1_DATA_SIZE\t32768\n"
+      "#define L1_DATA_LINESIZE\t256\n"
+      "#define L1_DATA_ASSOCIATIVE\t8\n"
+      "#define L2_SIZE\t8388608\n\n"
+      "#define L2_LINESIZE\t256\n"
+      "#define L2_ASSOCIATIVE\t8\n"
+      "#define L3_SIZE\t0\n\n"
+      "#define L3_LINESIZE\t0\n\n"
+      "#define L3_ASSOCIATIVE\t0\n\n"
+      "#define DTB_DEFAULT_ENTRIES\t64\n"
+      "#define DTB_SIZE\t4096\n"
+      "#define HAVE_VFPV4\n"
+      "#define HAVE_VFPV3\n"
+      "#define HAVE_VFP\n"
+      "#define HAVE_NEON\n"
+      "#define HAVE_SVE\n"
+      "#define ARMV8\n")
+    set(SGEMM_UNROLL_M 4)
+    set(SGEMM_UNROLL_N 8)
+    set(DGEMM_UNROLL_M 2)
+    set(DGEMM_UNROLL_N 8)
+    set(CGEMM_UNROLL_M 2)
+    set(CGEMM_UNROLL_N 4)
+    set(ZGEMM_UNROLL_M 2)
+    set(ZGEMM_UNROLL_N 4)
+    set(SYMV_P 16)
   elseif ("${TCORE}" STREQUAL "P5600")
     file(APPEND ${TARGET_CONF_TEMP}
       "#define L2_SIZE 1048576\n"
@@ -1309,6 +1340,63 @@ endif ()
       "#define DTB_DEFAULT_ENTRIES 128\n"
       "#define DTB_SIZE 4096\n"
       "#define L2_ASSOCIATIVE 8\n")
+  elseif ("${TCORE}" STREQUAL "RISCV64_GENERIC")
+    file(APPEND ${TARGET_CONF_TEMP}
+        "#define L1_DATA_SIZE 32768\n"
+      "#define L1_DATA_LINESIZE 32\n"
+      "#define L2_SIZE 1048576\n"
+      "#define L2_LINESIZE 32 \n"
+      "#define DTB_DEFAULT_ENTRIES 128\n"
+      "#define DTB_SIZE 4096\n"
+      "#define L2_ASSOCIATIVE 4\n")
+  elseif ("${TCORE}" STREQUAL "LA64_GENERIC")
+    file(APPEND ${TARGET_CONF_TEMP}
+      "#define DTB_DEFAULT_ENTRIES 64\n")
+      set(SGEMM_UNROLL_M 2)
+      set(SGEMM_UNROLL_N 8)
+      set(DGEMM_UNROLL_M 2)
+      set(DGEMM_UNROLL_N 8)
+      set(CGEMM_UNROLL_M 1)
+      set(CGEMM_UNROLL_N 4)
+      set(ZGEMM_UNROLL_M 1)
+      set(ZGEMM_UNROLL_N 4)
+      set(CGEMM3M_UNROLL_M 2)
+      set(CGEMM3M_UNROLL_N 8)
+      set(ZGEMM3M_UNROLL_M 2)
+      set(ZGEMM3M_UNROLL_N 8)
+  elseif ("${TCORE}" STREQUAL "LA264")
+    file(APPEND ${TARGET_CONF_TEMP}
+      "#define DTB_DEFAULT_ENTRIES 64\n")
+      set(HAVE_LSX  1)
+      set(SGEMM_UNROLL_M 2)
+      set(SGEMM_UNROLL_N 8)
+      set(DGEMM_UNROLL_M 8)
+      set(DGEMM_UNROLL_N 4)
+      set(CGEMM_UNROLL_M 8)
+      set(CGEMM_UNROLL_N 4)
+      set(ZGEMM_UNROLL_M 4)
+      set(ZGEMM_UNROLL_N 4)
+      set(CGEMM3M_UNROLL_M 2)
+      set(CGEMM3M_UNROLL_N 8)
+      set(ZGEMM3M_UNROLL_M 8)
+      set(ZGEMM3M_UNROLL_N 4)
+  elseif ("${TCORE}" STREQUAL "LA464")
+    file(APPEND ${TARGET_CONF_TEMP}
+      "#define DTB_DEFAULT_ENTRIES 64\n")
+      set(HAVE_LASX 1)
+      set(HAVE_LSX  1)
+      set(SGEMM_UNROLL_M 16)
+      set(SGEMM_UNROLL_N 8)
+      set(DGEMM_UNROLL_M 16)
+      set(DGEMM_UNROLL_N 6)
+      set(CGEMM_UNROLL_M 16)
+      set(CGEMM_UNROLL_N 4)
+      set(ZGEMM_UNROLL_M 8)
+      set(ZGEMM_UNROLL_N 4)
+      set(CGEMM3M_UNROLL_M 16)
+      set(CGEMM3M_UNROLL_N 8)
+      set(ZGEMM3M_UNROLL_M 16)
+      set(ZGEMM3M_UNROLL_N 6)
   endif()
   set(SBGEMM_UNROLL_M 8)
   set(SBGEMM_UNROLL_N 4)
@@ -1342,10 +1430,12 @@ else(NOT CMAKE_CROSSCOMPILING)
 
   if ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
     #Use generic for MSVC now
-    message("MSVC")
+    message(STATUS "MSVC")
     set(GETARCH_FLAGS ${GETARCH_FLAGS} -DFORCE_GENERIC)
   else()
-    list(APPEND GETARCH_SRC ${PROJECT_SOURCE_DIR}/cpuid.S)
+    if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+      list(APPEND GETARCH_SRC ${PROJECT_SOURCE_DIR}/cpuid.S)
+    endif()
     if (DEFINED TARGET_CORE)
     set(GETARCH_FLAGS ${GETARCH_FLAGS} -DFORCE_${TARGET_CORE})
   endif ()

@@ -2,11 +2,16 @@ name: mips64 qemu test
 
 on: [push, pull_request]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read # to fetch code (actions/checkout)
 
 jobs:
   TEST:
+    if: "github.repository == 'OpenMathLib/OpenBLAS'"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -36,14 +41,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install autoconf automake autotools-dev ninja-build make ccache \
-          gcc-${{ matrix.triple }} gfortran-${{ matrix.triple }} libgomp1-mips64el-cross
+          gcc-${{ matrix.triple }} gfortran-${{ matrix.triple }} libgomp1-mips64el-cross libglib2.0-dev
 
       - name: checkout qemu
         uses: actions/checkout@v3
         with:
           repository: qemu/qemu
           path: qemu
-          ref: 79dfa177ae348bb5ab5f97c0915359b13d6186e2
+          ref: ae35f033b874c627d81d51070187fbf55f0bf1a7
 
       - name: build qemu
         run: |
@@ -75,6 +80,7 @@ jobs:
         run: |
           export PATH=$GITHUB_WORKSPACE/qemu-install/bin/:$PATH
           qemu-mips64el ./utest/openblas_utest
+          qemu-mips64el ./utest/openblas_utest_ext
           OPENBLAS_NUM_THREADS=2 qemu-mips64el ./ctest/xscblat1
           OPENBLAS_NUM_THREADS=2 qemu-mips64el ./ctest/xdcblat1
           OPENBLAS_NUM_THREADS=2 qemu-mips64el ./ctest/xccblat1

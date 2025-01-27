@@ -290,6 +290,18 @@ ifndef QROTKERNEL
 QROTKERNEL = rot.S
 endif
 
+ifndef SROTMKERNEL
+SROTMKERNEL = ../generic/rotm.c
+endif
+
+ifndef DROTMKERNEL
+DROTMKERNEL = ../generic/rotm.c
+endif
+
+ifndef QROTMKERNEL
+QROTMKERNEL = ../generic/rotm.c
+endif
+
 ifndef CROTKERNEL
 CROTKERNEL = zrot_sse.S
 endif
@@ -405,7 +417,7 @@ DGEMVNKERNEL = dgemv_n.S
 endif
 
 ifndef DGEMVTKERNEL
-DGEMVTKERNEL = dgemv_t.S
+DGEMVTKERNEL = dgemv_t_4.c
 endif
 
 ifndef CGEMVNKERNEL
@@ -489,5 +501,8 @@ XGEMM3MKERNEL    =  xgemm3m_kernel_2x2.S
 
 SSUMKERNEL = ../arm/sum.c
 DSUMKERNEL = ../arm/sum.c
+CSUMKERNEL = zsum_sse.S
+ZSUMKERNEL = zsum_sse2.S
 
 SOMATCOPY_RT = omatcopy_rt.c
+SOMATCOPY_CT = omatcopy_ct.c

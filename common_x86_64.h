@@ -253,7 +253,7 @@ static __inline unsigned int blas_quickdivide(unsigned int x, unsigned int y){
 #ifndef BUFFERSIZE
 #define BUFFER_SIZE	(32 << 22)
 #else
-#define BUFFER_SIZE	(32 << BUFFERSIZE)
+#define BUFFER_SIZE	(32UL << BUFFERSIZE)
 #endif
 
 #define SEEK_ADDRESS
@@ -281,6 +281,10 @@ static __inline unsigned int blas_quickdivide(unsigned int x, unsigned int y){
 
 #ifdef F_INTERFACE_INTEL
 #define RETURN_BY_STACK
+#endif
+
+#ifdef F_INTERFACE_CRAYFC
+#define RETURN_BY_PACKED
 #endif
 
 #ifdef F_INTERFACE_FUJITSU

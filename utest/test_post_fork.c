@@ -33,6 +33,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <errno.h>
 #include <cblas.h>
 #ifdef USE_OPENMP
 #include <omp.h>
@@ -44,7 +45,7 @@ static void* xmalloc(size_t n)
     void* tmp;
     tmp = malloc(n);
     if (tmp == NULL) {
-        fprintf(stderr, "You are about to die\n");
+        fprintf(stderr, "Failed to allocate memory for the test payload.\n");
         exit(1);
     } else {
         return tmp;
@@ -67,6 +68,11 @@ static void check_dgemm(double *a, double *b, double *result, double *expected, 
 
 CTEST(fork, safety_after_fork_in_parent)
 {
+#ifdef __UCLIBC__
+#if !defined __UCLIBC_HAS_STUBS__ && !defined __ARCH_USE_MMU__
+exit(0);
+#endif
+#endif
 #ifndef BUILD_DOUBLE
 exit(0);
 #else
@@ -109,7 +115,11 @@ exit(0);
 
         fork_pid = fork();
         if (fork_pid == -1) {
-            CTEST_ERR("Failed to fork process.");
+            perror("fork");
+            CTEST_ERR("Failed to fork subprocesses in a loop.");
+#ifdef USE_OPENMP
+            CTEST_ERR("Number of OpenMP threads was %d in this attempt.",i);
+#endif
         } else if (fork_pid == 0) {
             // Just pretend to do something, e.g. call `uname`, then exit
             exit(0);
