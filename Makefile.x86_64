@@ -8,6 +8,11 @@ endif
 endif
 endif
 
+ifeq ($(C_COMPILER), CLANG)
+ifeq ($(findstring icx,$(CC)),icx)
+CCOMMON_OPT += -fp-model=consistent
+endif
+endif
 
 ifneq ($(DYNAMIC_ARCH),1)
 ADD_CPUFLAGS = 1
@@ -130,11 +135,11 @@ ifeq ($(C_COMPILER), GCC)
   endif
  endif
 else ifeq ($(C_COMPILER), CLANG)
- # cooperlake support was added in clang 12
+ # sapphire rapids support was added in clang 12
  ifeq ($(CLANGVERSIONGTEQ12), 1)
-  CCOMMON_OPT += -march=cooperlake
+  CCOMMON_OPT += -march=sapphirerapids
   ifneq ($(F_COMPILER), NAG)
-   FCOMMON_OPT += -march=cooperlake
+   FCOMMON_OPT += -march=sapphirerapids
   endif
  else  # not supported in clang, fallback to avx512
   CCOMMON_OPT += -march=skylake-avx512

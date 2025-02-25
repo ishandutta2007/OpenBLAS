@@ -2,13 +2,14 @@
 ## Author: Hank Anderson <hank@statease.com>
 ##
 
-cmake_minimum_required(VERSION 2.8.5)
+cmake_minimum_required(VERSION 3.16.0)
 
+set (CMAKE_ASM_SOURCE_FILE_EXTENSIONS "S")
 project(OpenBLAS C ASM)
 
 set(OpenBLAS_MAJOR_VERSION 0)
 set(OpenBLAS_MINOR_VERSION 3)
-set(OpenBLAS_PATCH_VERSION 24.dev)
+set(OpenBLAS_PATCH_VERSION 29.dev)
 
 set(OpenBLAS_VERSION "${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}.${OpenBLAS_PATCH_VERSION}")
 
@@ -22,13 +23,17 @@ option(BUILD_WITHOUT_LAPACK "Do not build LAPACK and LAPACKE (Only BLAS or CBLAS
 
 option(BUILD_LAPACK_DEPRECATED "When building LAPACK, include also some older, deprecated routines" ON)
 
+set(LAPACK_STRLEN "" CACHE STRING "When building LAPACK, use this type (e.g. \"int\") for character lengths (defaults to size_t)")
+
 option(BUILD_TESTING "Build LAPACK testsuite when building LAPACK" ON)
+
+option(BUILD_BENCHMARKS "Build the collection of BLAS/LAPACK benchmarks" OFF)
 
 option(C_LAPACK "Build LAPACK from C sources instead of the original Fortran" OFF)
 
 option(BUILD_WITHOUT_CBLAS "Do not build the C interface (CBLAS) to the BLAS functions" OFF)
 
-option(DYNAMIC_ARCH "Include support for multiple CPU targets, with automatic selection at runtime (x86/x86_64, aarch64 or ppc only)" OFF)
+option(DYNAMIC_ARCH "Include support for multiple CPU targets, with automatic selection at runtime (x86/x86_64, aarch64, ppc or RISCV64-RVV1.0 only)" OFF)
 
 option(DYNAMIC_OLDER "Include specific support for older x86 cpu models (Penryn,Dunnington,Atom,Nano,Opteron) with DYNAMIC_ARCH" OFF)
 
@@ -39,6 +44,11 @@ option(USE_LOCKING "Use locks even in single-threaded builds to make them callab
 option(USE_PERL "Use the older PERL scripts for build preparation instead of universal shell scripts" OFF)
 
 option(NO_WARMUP "Do not run a benchmark on each startup just to find the best location for the memory buffer" ON)
+
+option(FIXED_LIBNAME "Use a non-versioned name for the library and no symbolic linking to variant names" OFF)
+
+set(LIBNAMEPREFIX "" CACHE STRING  "Add a prefix to the openblas part of the library name" )
+set(LIBNAMESUFFIX "" CACHE STRING  "Add a suffix after the openblas part of the library name" )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
   option(NO_AFFINITY "Disable support for CPU affinity masks to avoid binding processes from e.g. R or numpy/scipy to a single core" ON)
@@ -93,10 +103,14 @@ endif()
 
 message(WARNING "CMake support is experimental. It does not yet support all build options and may not produce the same Makefiles that OpenBLAS ships with.")
 
+if (USE_OPENMP)
+  find_package(OpenMP REQUIRED)
+endif ()
+
 include("${PROJECT_SOURCE_DIR}/cmake/utils.cmake")
 include("${PROJECT_SOURCE_DIR}/cmake/system.cmake")
 
-set(OpenBLAS_LIBNAME openblas${SUFFIX64_UNDERSCORE})
+set(OpenBLAS_LIBNAME ${LIBNAMEPREFIX}openblas${LIBNAMESUFFIX}${SUFFIX64_UNDERSCORE})
 
 set(BLASDIRS interface driver/level2 driver/level3 driver/others)
 
@@ -249,20 +263,30 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "AIX|Android|Linux|FreeBSD|OpenBSD|NetBSD|Drago
   endif()
 endif()
 
-if (APPLE AND DYNAMIC_ARCH AND BUILD_SHARED_LIBS)
+if (USE_OPENMP)
+  if(BUILD_STATIC_LIBS)
+    target_link_libraries(${OpenBLAS_LIBNAME}_static OpenMP::OpenMP_C)
+  endif()
+  if(BUILD_SHARED_LIBS)
+    target_link_libraries(${OpenBLAS_LIBNAME}_shared OpenMP::OpenMP_C)
+  endif()
+endif()
+
+# Seems that this hack doesn't required since macOS 11 Big Sur
+if (APPLE AND BUILD_SHARED_LIBS AND CMAKE_HOST_SYSTEM_VERSION VERSION_LESS 20)
   set (CMAKE_C_USE_RESPONSE_FILE_FOR_OBJECTS 1)
   if (NOT NOFORTRAN)
   set (CMAKE_Fortran_USE_RESPONSE_FILE_FOR_OBJECTS 1)
   set (CMAKE_Fortran_CREATE_SHARED_LIBRARY
- "sh -c 'cat ${CMAKE_BINARY_DIR}/CMakeFiles/openblas_shared.dir/objects*.rsp | xargs -n 1024 ar -ru libopenblas.a && exit 0' "
- "sh -c 'ar -ru libopenblas.a ${CMAKE_BINARY_DIR}/driver/others/CMakeFiles/driver_others.dir/xerbla.c.o && exit 0' "
+ "sh -c 'cat ${CMAKE_BINARY_DIR}/CMakeFiles/openblas_shared.dir/objects*.rsp | xargs -n 1024 ${CMAKE_AR} -ru libopenblas.a && exit 0' "
+ "sh -c '${CMAKE_AR} -rs libopenblas.a ${CMAKE_BINARY_DIR}/driver/others/CMakeFiles/driver_others.dir/xerbla.c.o && exit 0' "
  "sh -c 'echo \"\" | ${CMAKE_Fortran_COMPILER} -o dummy.o -c -x f95-cpp-input - '"
  "sh -c '${CMAKE_Fortran_COMPILER} -fpic -shared -Wl,-all_load -Wl,-force_load,libopenblas.a -Wl,-noall_load dummy.o -o ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libopenblas.${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}.dylib'"
  "sh -c 'ls -l ${CMAKE_BINARY_DIR}/lib'")
   else ()
   set (CMAKE_C_CREATE_SHARED_LIBRARY
-   "sh -c 'cat ${CMAKE_BINARY_DIR}/CMakeFiles/openblas_shared.dir/objects*.rsp | xargs -n 1024 ar -ru libopenblas.a && exit 0' "
-   "sh -c 'ar -ru libopenblas.a ${CMAKE_BINARY_DIR}/driver/others/CMakeFiles/driver_others.dir/xerbla.c.o && exit 0' "
+   "sh -c 'cat ${CMAKE_BINARY_DIR}/CMakeFiles/openblas_shared.dir/objects*.rsp | xargs -n 1024 ${CMAKE_AR} -ru libopenblas.a && exit 0' "
+   "sh -c '${CMAKE_AR} -rs libopenblas.a ${CMAKE_BINARY_DIR}/driver/others/CMakeFiles/driver_others.dir/xerbla.c.o && exit 0' "
    "sh -c '${CMAKE_C_COMPILER} -fpic -shared -Wl,-all_load -Wl,-force_load,libopenblas.a -Wl,-noall_load -o ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libopenblas.${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}.dylib'")
   endif ()
 endif()
@@ -322,7 +346,7 @@ if (NOT NOFORTRAN)
   # Build test and ctest
   add_subdirectory(test)
  endif()
-  if (BUILD_TESTING)
+ if (BUILD_TESTING AND NOT BUILD_WITHOUT_LAPACK)
     add_subdirectory(lapack-netlib/TESTING)
   endif()
 endif()
@@ -335,11 +359,12 @@ endif()
     add_subdirectory(cpp_thread_test)
   endif()
 
+if (NOT FIXED_LIBNAME)
 set_target_properties(${OpenBLAS_LIBS} PROPERTIES
   VERSION ${OpenBLAS_MAJOR_VERSION}.${OpenBLAS_MINOR_VERSION}
   SOVERSION ${OpenBLAS_MAJOR_VERSION}
 )
-
+endif()
 if (BUILD_SHARED_LIBS AND BUILD_RELAPACK)
   if (NOT MSVC)
     target_link_libraries(${OpenBLAS_LIBNAME}_shared "-Wl,-allow-multiple-definition")
@@ -451,6 +476,61 @@ if (BUILD_SHARED_LIBS AND NOT ${SYMBOLPREFIX}${SYMBOLSUFFIX} STREQUAL "")
   endif()
 endif()
 
+if (BUILD_BENCHMARKS)
+	#find_package(OpenMP REQUIRED)
+  file(GLOB SOURCES "benchmark/*.c")
+  if (NOT USE_OPENMP)
+  file(GLOB REMFILE "benchmark/smallscaling.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  endif()
+  if (BUILD_WITHOUT_LAPACK)
+  file(GLOB REMFILE "benchmark/cholesky.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  file(GLOB REMFILE "benchmark/geev.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  file(GLOB REMFILE "benchmark/gesv.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  file(GLOB REMFILE "benchmark/getri.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  file(GLOB REMFILE "benchmark/potrf.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  file(GLOB REMFILE "benchmark/spmv.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  file(GLOB REMFILE "benchmark/symv.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  file(GLOB REMFILE "benchmark/linpack.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  endif()
+  if (NOT USE_GEMM3M)
+  file(GLOB REMFILE "benchmark/gemm3m.c")
+  list(REMOVE_ITEM SOURCES ${REMFILE})
+  endif()
+  foreach(source ${SOURCES})
+    get_filename_component(name ${source} NAME_WE)
+    if ((NOT ${name} STREQUAL "zdot-intel") AND (NOT ${name} STREQUAL "cula_wrapper"))
+        set(defines DEFAULT COMPLEX DOUBLE "COMPLEX\;DOUBLE")
+      foreach(define ${defines})
+        set(target_name "benchmark_${name}")
+        if (NOT "${define}" STREQUAL "DEFAULT")
+          string(JOIN "_" define_str ${define})
+          set(target_name "${target_name}_${define_str}")
+        endif()
+        if ((NOT ${target_name} STREQUAL "benchmark_imax_COMPLEX") AND (NOT ${target_name} STREQUAL "benchmark_imax_COMPLEX_DOUBLE") AND
+            (NOT ${target_name} STREQUAL "benchmark_imin_COMPLEX") AND (NOT ${target_name} STREQUAL "benchmark_imin_COMPLEX_DOUBLE") AND
+            (NOT ${target_name} STREQUAL "benchmark_max_COMPLEX") AND (NOT ${target_name} STREQUAL "benchmark_max_COMPLEX_DOUBLE") AND
+            (NOT ${target_name} STREQUAL "benchmark_min_COMPLEX") AND (NOT ${target_name} STREQUAL "benchmark_min_COMPLEX_DOUBLE"))
+          add_executable(${target_name} ${source})
+          target_include_directories(${target_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+	    target_link_libraries(${target_name} ${OpenBLAS_LIBNAME} )
+	  #  target_link_libraries(${target_name} ${OpenBLAS_LIBNAME} OpenMP::OpenMP_C)
+          if (NOT "${define}" STREQUAL "DEFAULT")
+            target_compile_definitions(${target_name} PRIVATE ${define})
+          endif()
+        endif()
+      endforeach()
+    endif()
+  endforeach()
+endif()
 
 
 # Install project
@@ -541,7 +621,7 @@ if(NOT NO_LAPACKE)
   ADD_CUSTOM_TARGET(genlapacke
   COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/lapack-netlib/LAPACKE/include/lapacke_mangling_with_flags.h.in "${CMAKE_BINARY_DIR}/lapacke_mangling.h"
   )
-  install (FILES ${CMAKE_BINARY_DIR}/lapacke_mangling.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/openblas${SUFFIX64})
+  install (FILES ${CMAKE_BINARY_DIR}/lapacke_mangling.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 endif()
 
 # Install pkg-config files

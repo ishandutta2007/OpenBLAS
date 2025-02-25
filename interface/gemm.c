@@ -1,4 +1,5 @@
 /*********************************************************************/
+/* Copyright 2024, 2025 The OpenBLAS Project                         */
 /* Copyright 2009, 2010 The University of Texas at Austin.           */
 /* All rights reserved.                                              */
 /*                                                                   */
@@ -38,6 +39,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include "common.h"
 #ifdef FUNCTION_PROFILE
 #include "functable.h"
@@ -47,12 +49,16 @@
 #define SMP_THRESHOLD_MIN 65536.0
 #ifdef XDOUBLE
 #define ERROR_NAME "QGEMM "
+#define GEMV BLASFUNC(qgemv)
 #elif defined(DOUBLE)
 #define ERROR_NAME "DGEMM "
+#define GEMV BLASFUNC(dgemv)
 #elif defined(BFLOAT16)
 #define ERROR_NAME "SBGEMM "
+#define GEMV BLASFUNC(sbgemv)
 #else
 #define ERROR_NAME "SGEMM "
+#define GEMV BLASFUNC(sgemv)
 #endif
 #else
 #define SMP_THRESHOLD_MIN 8192.0
@@ -80,7 +86,7 @@
 #endif
 
 static int (*gemm[])(blas_arg_t *, BLASLONG *, BLASLONG *, IFLOAT *, IFLOAT *, BLASLONG) = {
-#ifndef GEMM3M
+#if !defined(GEMM3M) || defined(GENERIC)
   GEMM_NN, GEMM_TN, GEMM_RN, GEMM_CN,
   GEMM_NT, GEMM_TT, GEMM_RT, GEMM_CT,
   GEMM_NR, GEMM_TR, GEMM_RR, GEMM_CR,
@@ -168,6 +174,74 @@ static int init_amxtile_permission() {
   }
   openblas_amxtile_permission = 1;
   return 0;
+}
+#endif
+
+#ifdef SMP
+#ifdef DYNAMIC_ARCH
+extern char* gotoblas_corename(void);
+#endif
+
+#if defined(DYNAMIC_ARCH) || defined(NEOVERSEV1)
+static inline int get_gemm_optimal_nthreads_neoversev1(double MNK, int ncpu) {
+  return
+      MNK < 262144L    ? 1
+    : MNK < 1124864L   ? MIN(ncpu, 6)
+    : MNK < 7880599L   ? MIN(ncpu, 12)
+    : MNK < 17173512L  ? MIN(ncpu, 16)
+    : MNK < 33386248L  ? MIN(ncpu, 20)
+    : MNK < 57066625L  ? MIN(ncpu, 24)
+    : MNK < 91733851L  ? MIN(ncpu, 32)
+    : MNK < 265847707L ? MIN(ncpu, 40)
+    : MNK < 458314011L ? MIN(ncpu, 48)
+    : MNK < 729000000L ? MIN(ncpu, 56)
+    : ncpu;
+}
+#endif
+
+#if defined(DYNAMIC_ARCH) || defined(NEOVERSEV2)
+static inline int get_gemm_optimal_nthreads_neoversev2(double MNK, int ncpu) {
+  return
+      MNK < 125000L     ? 1
+    : MNK < 1092727L    ? MIN(ncpu, 6)
+    : MNK < 2628072L    ? MIN(ncpu, 8)
+    : MNK < 8000000L    ? MIN(ncpu, 12)
+    : MNK < 20346417L   ? MIN(ncpu, 16)
+    : MNK < 57066625L   ? MIN(ncpu, 24)
+    : MNK < 91125000L   ? MIN(ncpu, 28)
+    : MNK < 238328000L  ? MIN(ncpu, 40)
+    : MNK < 454756609L  ? MIN(ncpu, 48)
+    : MNK < 857375000L  ? MIN(ncpu, 56)
+    : MNK < 1073741824L ? MIN(ncpu, 64)
+    : ncpu;
+}
+#endif
+
+static inline int get_gemm_optimal_nthreads(double MNK) {
+  int ncpu = num_cpu_avail(3);
+#if defined(NEOVERSEV1) && !defined(COMPLEX) && !defined(DOUBLE) && !defined(BFLOAT16)
+  return get_gemm_optimal_nthreads_neoversev1(MNK, ncpu);
+#elif defined(NEOVERSEV2) && !defined(COMPLEX) && !defined(DOUBLE) && !defined(BFLOAT16)
+  return get_gemm_optimal_nthreads_neoversev2(MNK, ncpu);
+#elif defined(DYNAMIC_ARCH) && !defined(COMPLEX) && !defined(DOUBLE) && !defined(BFLOAT16)
+  if (strcmp(gotoblas_corename(), "neoversev1") == 0) {
+    return get_gemm_optimal_nthreads_neoversev1(MNK, ncpu);
+  }
+  if (strcmp(gotoblas_corename(), "neoversev2") == 0) {
+    return get_gemm_optimal_nthreads_neoversev2(MNK, ncpu);
+  }
+#endif
+  if ( MNK <= (SMP_THRESHOLD_MIN  * (double) GEMM_MULTITHREAD_THRESHOLD) ) {
+    return 1;
+  }
+  else {
+    if (MNK/ncpu < SMP_THRESHOLD_MIN*(double)GEMM_MULTITHREAD_THRESHOLD) {
+      return MNK/(SMP_THRESHOLD_MIN*(double)GEMM_MULTITHREAD_THRESHOLD);
+    }
+    else {
+      return ncpu;
+    }
+  }
 }
 #endif
 
@@ -304,7 +378,7 @@ void CNAME(enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE TransA, enum CBLAS_TRANS
   FLOAT *beta  = (FLOAT*) vbeta;
   FLOAT *a = (FLOAT*) va;
   FLOAT *b = (FLOAT*) vb;
-  FLOAT *c = (FLOAT*) vc;	   
+  FLOAT *c = (FLOAT*) vc;
 #endif
 
   blas_arg_t args;
@@ -344,14 +418,21 @@ void CNAME(enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE TransA, enum CBLAS_TRANS
   PRINT_DEBUG_CNAME;
 
 #if !defined(COMPLEX) && !defined(DOUBLE) && !defined(BFLOAT16) && defined(USE_SGEMM_KERNEL_DIRECT)
-#ifdef DYNAMIC_ARCH
+#if defined(DYNAMIC_ARCH) && defined(ARCH_x86)
  if (support_avx512() )
-#endif  
   if (beta == 0 && alpha == 1.0 && order == CblasRowMajor && TransA == CblasNoTrans && TransB == CblasNoTrans && SGEMM_DIRECT_PERFORMANT(m,n,k)) {
 	SGEMM_DIRECT(m, n, k, a, lda, b, ldb, c, ldc);
 	return;
   }
-
+#endif
+#if defined(DYNAMIC_ARCH) && defined(ARCH_ARM64)
+ if (support_sme1()){
+  if (beta == 0 && alpha == 1.0 && order == CblasRowMajor && TransA == CblasNoTrans && TransB == CblasNoTrans) {
+	SGEMM_DIRECT(m, n, k, a, lda, b, ldb, c, ldc);
+	return;
+  }
+ }
+#endif
 #endif
 
 #ifndef COMPLEX
@@ -493,6 +574,67 @@ void CNAME(enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE TransA, enum CBLAS_TRANS
 	 args.m, args.n, args.k, args.lda, args.ldb, args.ldc);
 #endif
 
+#if defined(GEMM_GEMV_FORWARD) && !defined(GEMM3M) && !defined(COMPLEX) && (!defined(BFLOAT16) || defined(GEMM_GEMV_FORWARD_BF16))
+#if defined(ARCH_ARM64)
+  // The gemv kernels in arm64/{gemv_n.S,gemv_n_sve.c,gemv_t.S,gemv_t_sve.c}
+  // perform poorly in certain circumstances. We use the following boolean
+  // variable along with the gemv argument values to avoid these inefficient
+  // gemv cases, see github issue#4951.
+  bool have_tuned_gemv = false;
+#else
+  bool have_tuned_gemv = true;
+#endif
+  // Check if we can convert GEMM -> GEMV
+  if (args.k != 0) {
+    if (args.n == 1) {
+      blasint inc_x = 1;
+      blasint inc_y = 1;
+      // These were passed in as blasint, but the struct translates them to blaslong
+      blasint m = args.m;
+      blasint n = args.k;
+      blasint lda = args.lda;
+      // Create new transpose parameters
+      char NT = 'N';
+      if (transa & 1) {
+        NT = 'T';
+        m = args.k;
+        n = args.m;
+      }
+      if (transb & 1) {
+        inc_x = args.ldb;
+      }
+      bool is_efficient_gemv = have_tuned_gemv || ((NT == 'N') || (NT == 'T' && inc_x == 1));
+      if (is_efficient_gemv) {
+        GEMV(&NT, &m, &n, args.alpha, args.a, &lda, args.b, &inc_x, args.beta, args.c, &inc_y);
+        return;
+      }
+    }
+    if (args.m == 1) {
+      blasint inc_x = args.lda;
+      blasint inc_y = args.ldc;
+      // These were passed in as blasint, but the struct translates them to blaslong
+      blasint m = args.k;
+      blasint n = args.n;
+      blasint ldb = args.ldb;
+      // Create new transpose parameters
+      char NT = 'T';
+      if (transa & 1) {
+        inc_x = 1;
+      }
+      if (transb & 1) {
+        NT = 'N';
+        m = args.n;
+        n = args.k;
+      }
+      bool is_efficient_gemv = have_tuned_gemv || ((NT == 'N' && inc_y == 1) || (NT == 'T' && inc_x == 1));
+      if (is_efficient_gemv) {
+        GEMV(&NT, &m, &n, args.alpha, args.b, &ldb, args.a, &inc_x, args.beta, args.c, &inc_y);
+        return;
+      }
+    }
+  }
+#endif
+
   IDEBUG_START;
 
   FUNCTION_PROFILE_START();
@@ -521,7 +663,13 @@ void CNAME(enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE TransA, enum CBLAS_TRANS
 
   buffer = (XFLOAT *)blas_memory_alloc(0);
 
+//For LOONGARCH64, applying an offset to the buffer is essential
+//for minimizing cache conflicts and optimizing performance.
+#if defined(ARCH_LOONGARCH64) && !defined(NO_AFFINITY)
+  sa = (XFLOAT *)((BLASLONG)buffer + (WhereAmI() & 0xf) * GEMM_OFFSET_A);
+#else
   sa = (XFLOAT *)((BLASLONG)buffer +GEMM_OFFSET_A);
+#endif
   sb = (XFLOAT *)(((BLASLONG)sa + ((GEMM_P * GEMM_Q * COMPSIZE * SIZE + GEMM_ALIGN) & ~GEMM_ALIGN)) + GEMM_OFFSET_B);
 
 #ifdef SMP
@@ -531,10 +679,8 @@ void CNAME(enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE TransA, enum CBLAS_TRANS
 #endif
 
   MNK = (double) args.m * (double) args.n * (double) args.k;
-  if ( MNK <= (SMP_THRESHOLD_MIN  * (double) GEMM_MULTITHREAD_THRESHOLD)  )
-	args.nthreads = 1;
-  else
-	args.nthreads = num_cpu_avail(3);
+  args.nthreads = get_gemm_optimal_nthreads(MNK);
+
   args.common = NULL;
 
  if (args.nthreads == 1) {

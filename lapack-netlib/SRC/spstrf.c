@@ -52,8 +52,8 @@ static inline _Complex double * _pCd(doublecomplex *z) {return (_Complex double*
 #endif
 #define pCf(z) (*_pCf(z))
 #define pCd(z) (*_pCd(z))
-typedef int logical;
-typedef short int shortlogical;
+typedef blasint logical;
+
 typedef char logical1;
 typedef char integer1;
 
@@ -256,11 +256,11 @@ static char junk[] = "\n@(#)LIBF77 VERSION 19990503\n";
 #define myceiling_(w) {ceil(w)}
 #define myhuge_(w) {HUGE_VAL}
 //#define mymaxloc_(w,s,e,n) {if (sizeof(*(w)) == sizeof(double)) dmaxloc_((w),*(s),*(e),n); else dmaxloc_((w),*(s),*(e),n);}
-#define mymaxloc_(w,s,e,n) dmaxloc_(w,*(s),*(e),n)
+#define mymaxloc_(w,s,e,n) smaxloc_(w,*(s),*(e),n)
 
 /* procedure parameter types for -A and -C++ */
 
-#define F2C_proc_par_types 1
+
 #ifdef __cplusplus
 typedef logical (*L_fp)(...);
 #else

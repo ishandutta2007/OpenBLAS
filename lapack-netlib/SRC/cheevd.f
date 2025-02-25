@@ -116,8 +116,7 @@
 *>
 *> \param[out] RWORK
 *> \verbatim
-*>          RWORK is REAL array,
-*>                                         dimension (LRWORK)
+*>          RWORK is REAL array, dimension (MAX(1,LRWORK))
 *>          On exit, if INFO = 0, RWORK(1) returns the optimal LRWORK.
 *> \endverbatim
 *>
@@ -180,7 +179,7 @@
 *> \author Univ. of Colorado Denver
 *> \author NAG Ltd.
 *
-*> \ingroup complexHEeigen
+*> \ingroup heevd
 *
 *> \par Further Details:
 *  =====================
@@ -230,8 +229,8 @@
 *     .. External Functions ..
       LOGICAL            LSAME
       INTEGER            ILAENV
-      REAL               CLANHE, SLAMCH
-      EXTERNAL           ILAENV, LSAME, CLANHE, SLAMCH
+      REAL               CLANHE, SLAMCH, SROUNDUP_LWORK
+      EXTERNAL           ILAENV, LSAME, CLANHE, SLAMCH, SROUNDUP_LWORK
 *     ..
 *     .. External Subroutines ..
       EXTERNAL           CHETRD, CLACPY, CLASCL, CSTEDC, CUNMTR, SSCAL,
@@ -282,8 +281,8 @@
             LROPT = LRWMIN
             LIOPT = LIWMIN
          END IF
-         WORK( 1 ) = LOPT
-         RWORK( 1 ) = LROPT
+         WORK( 1 ) = SROUNDUP_LWORK( LOPT )
+         RWORK( 1 ) = SROUNDUP_LWORK( LROPT )
          IWORK( 1 ) = LIOPT
 *
          IF( LWORK.LT.LWMIN .AND. .NOT.LQUERY ) THEN
@@ -378,8 +377,8 @@
          CALL SSCAL( IMAX, ONE / SIGMA, W, 1 )
       END IF
 *
-      WORK( 1 ) = LOPT
-      RWORK( 1 ) = LROPT
+      WORK( 1 ) = SROUNDUP_LWORK( LOPT )
+      RWORK( 1 ) = SROUNDUP_LWORK( LROPT )
       IWORK( 1 ) = LIOPT
 *
       RETURN

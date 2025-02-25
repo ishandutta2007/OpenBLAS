@@ -78,8 +78,6 @@
 #define RMB		__asm__ __volatile__ ("sync")
 #endif
 
-#define INLINE inline
-
 #ifdef PPC440
 #define STDERR stdout
 #define QNONCACHE 0x1
@@ -91,7 +89,7 @@
 
 void *qalloc(int flags, size_t bytes);
 
-static INLINE void blas_lock(volatile unsigned long *address){
+static inline void blas_lock(volatile unsigned long *address){
 
   long int ret, val = 1;
 
@@ -841,17 +839,17 @@ Lmcount$lazy_ptr:
 #endif
 
 #if defined(PPC440)
-#define BUFFER_SIZE     (  2 << 20)
+#define BUFFER_SIZE     (  2UL << 20)
 #elif defined(PPC440FP2)
-#define BUFFER_SIZE     ( 16 << 20)
+#define BUFFER_SIZE     ( 16UL << 20)
 #elif defined(POWER6) || defined(POWER8) || defined(POWER9) || defined(POWER10)
-#define BUFFER_SIZE     ( 64 << 22)
+#define BUFFER_SIZE     ( 64UL << 22)
 #else
-#define BUFFER_SIZE     ( 16 << 20)
+#define BUFFER_SIZE     ( 16UL << 20)
 #endif
 #ifdef DYNAMIC_ARCH
 #undef BUFFER_SIZE
-#define BUFFER_SIZE (64 << 22)
+#define BUFFER_SIZE (64UL << 22)
 #endif
 
 #ifndef PAGESIZE

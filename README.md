@@ -2,12 +2,8 @@
 
 [![Join the chat at https://gitter.im/xianyi/OpenBLAS](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/xianyi/OpenBLAS?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-Travis CI: [![Build Status](https://travis-ci.com/xianyi/OpenBLAS.svg?branch=develop)](https://travis-ci.com/xianyi/OpenBLAS)
-
-AppVeyor: [![Build status](https://ci.appveyor.com/api/projects/status/09sohd35n8nkkx64/branch/develop?svg=true)](https://ci.appveyor.com/project/xianyi/openblas/branch/develop)
-
 Cirrus CI: [![Build Status](https://api.cirrus-ci.com/github/xianyi/OpenBLAS.svg?branch=develop)](https://cirrus-ci.com/github/xianyi/OpenBLAS)
-<!-- Drone CI: [![Build Status](https://cloud.drone.io/api/badges/xianyi/OpenBLAS/status.svg?branch=develop)](https://cloud.drone.io/xianyi/OpenBLAS/)-->
+
 
 
 [![Build Status](https://dev.azure.com/xianyi/OpenBLAS/_apis/build/status/xianyi.OpenBLAS?branchName=develop)](https://dev.azure.com/xianyi/OpenBLAS/_build/latest?definitionId=1&branchName=develop)
@@ -19,11 +15,14 @@ OSUOSL IBMZ-CI [![Build Status](http://ibmz-ci.osuosl.org/buildStatus/icon?job=O
 
 OpenBLAS is an optimized BLAS (Basic Linear Algebra Subprograms) library based on GotoBLAS2 1.13 BSD version.
 
-Please read the documentation on the OpenBLAS wiki pages: <https://github.com/xianyi/OpenBLAS/wiki>.
+For more information about OpenBLAS, please see:
+
+- The documentation at [openmathlib.org/OpenBLAS/docs/](http://www.openmathlib.org/OpenBLAS/docs),
+- The home page at [openmathlib.org/OpenBLAS/](http://www.openmathlib.org/OpenBLAS).
 
 For a general introduction to the BLAS routines, please refer to the extensive documentation of their reference implementation hosted at netlib:
 <https://www.netlib.org/blas>. On that site you will likewise find documentation for the reference implementation of the higher-level library LAPACK - the **L**inear **A**lgebra **Pack**age that comes included with OpenBLAS. If you are looking for a general primer or refresher on Linear Algebra, the set of six
-20-minute lecture videos by Prof. Gilbert Strang on either MIT OpenCourseWare <https://ocw.mit.edu/resources/res-18-010-a-2020-vision-of-linear-algebra-spring-2020/> or Youtube <https://www.youtube.com/playlist?list=PLUl4u3cNGP61iQEFiWLE21EJCxwmWvvek> may be helpful.
+20-minute lecture videos by Prof. Gilbert Strang on either MIT OpenCourseWare [here](https://ocw.mit.edu/resources/res-18-010-a-2020-vision-of-linear-algebra-spring-2020/) or YouTube [here](https://www.youtube.com/playlist?list=PLUl4u3cNGP61iQEFiWLE21EJCxwmWvvek) may be helpful.
 
 ## Binary Packages
 
@@ -31,54 +30,69 @@ We provide official binary packages for the following platform:
 
   * Windows x86/x86_64
 
-You can download them from [file hosting on sourceforge.net](https://sourceforge.net/projects/openblas/files/) or from the Releases section of the github project page, [https://github.com/xianyi/OpenBLAS/releases](https://github.com/xianyi/OpenBLAS/releases).
+You can download them from [file hosting on sourceforge.net](https://sourceforge.net/projects/openblas/files/) or from the [Releases section of the GitHub project page](https://github.com/OpenMathLib/OpenBLAS/releases).
+
+OpenBLAS is also packaged for many package managers - see [the installation section of the docs](http://www.openmathlib.org/OpenBLAS/docs/install/) for details.
 
 ## Installation from Source
 
-Download from project homepage, https://xianyi.github.com/OpenBLAS/, or check out the code
-using Git from https://github.com/xianyi/OpenBLAS.git. (If you want the most up to date version, be
-sure to use the develop branch - master is several years out of date due to a change of maintainership.)
-Buildtime parameters can be chosen in Makefile.rule, see there for a short description of each option.
-Most can also be given directly on the make or cmake command line.
+Obtain the source code from https://github.com/OpenMathLib/OpenBLAS/. Note that the default branch
+is `develop` (a `master` branch is still present, but far out of date).
+
+Build-time parameters can be chosen in `Makefile.rule`, see there for a short description of each option.
+Most options can also be given directly on the command line as parameters to your `make` or `cmake` invocation.
 
 ### Dependencies
 
 Building OpenBLAS requires the following to be installed:
 
-* GNU Make
-* A C compiler, e.g. GCC or Clang
+* GNU Make or CMake
+* A C compiler, e.g. GCC or Clang 
 * A Fortran compiler (optional, for LAPACK)
-* IBM MASS (optional, see below)
+
+In general, using a recent version of the compiler is strongly recommended.
+If a Fortran compiler is not available, it is possible to compile an older version of the included LAPACK
+that has been machine-translated to C.
 
 ### Normal compile
 
 Simply invoking `make` (or `gmake` on BSD) will detect the CPU automatically.
 To set a specific target CPU, use `make TARGET=xxx`, e.g. `make TARGET=NEHALEM`.
-The full target list is in the file `TargetList.txt`. For building with `cmake`, the
-usual conventions apply, i.e. create a build directory either underneath the toplevel
-OpenBLAS source directory or separate from it, and invoke `cmake` there with the path
-to the source tree and any build options you plan to set.
+The full target list is in the file `TargetList.txt`, other build optionss are documented in Makefile.rule and
+can either be set there (typically by removing the comment character from the respective line), or used on the
+`make` command line. 
+Note that when you run `make install` after building, you need to repeat all command line options you provided to `make`
+in the build step, as some settings like the supported maximum number of threads are automatically derived from the
+build host by default, which might not be what you want.
+For building with `cmake`, the usual conventions apply, i.e. create a build directory either underneath the toplevel
+OpenBLAS source directory or separate from it, and invoke `cmake` there with the path to the source tree and any 
+build options you plan to set.
+
+For more details, see the [Building from source](http://www.openmathlib.org/OpenBLAS/docs/install/#building-from-source)
+section in the docs.
 
 ### Cross compile
 
-Set `CC` and `FC` to point to the cross toolchains, and set `HOSTCC` to your host C compiler.
+Set `CC` and `FC` to point to the cross toolchains, and if you use `make`, also set `HOSTCC` to your host C compiler.
 The target must be specified explicitly when cross compiling.
 
 Examples:
 
-* On an x86 box, compile this library for a loongson3a CPU:
+* On a Linux system, cross-compiling to an older MIPS64 router board:
   ```sh
-  make BINARY=64 CC=mips64el-unknown-linux-gnu-gcc FC=mips64el-unknown-linux-gnu-gfortran HOSTCC=gcc TARGET=LOONGSON3A
+  make BINARY=64 CC=mipsisa64r6el-linux-gnuabi64-gcc FC=mipsisa64r6el-linux-gnuabi64-gfortran HOSTCC=gcc TARGET=P6600
   ```
-  or same with the newer mips-crosscompiler put out by Loongson that defaults to the 32bit ABI:
+*  or to a Windows x64 host: 
   ```sh
-  make HOSTCC=gcc CC='/opt/mips-loongson-gcc7.3-linux-gnu/2019.06-29/bin/mips-linux-gnu-gcc -mabi=64' FC='/opt/mips-loongson-gcc7.3-linux-gnu/2019.06-29/bin/mips-linux-gnu-gfortran -mabi=64' TARGET=LOONGSON3A
+  make CC="i686-w64-mingw32-gcc -Bstatic" FC="i686-w64-mingw32-gfortran -static-libgfortran" TARGET=HASWELL BINARY=32 CROSS=1 NUM_THREADS=20 CONSISTENT_FPCSR=1 HOSTCC=gcc
   ```
 
-* On an x86 box, compile this library for a loongson3a CPU with loongcc (based on Open64) compiler:
-  ```sh
-  make CC=loongcc FC=loongf95 HOSTCC=gcc TARGET=LOONGSON3A CROSS=1 CROSS_SUFFIX=mips64el-st-linux-gnu-   NO_LAPACKE=1 NO_SHARED=1 BINARY=32
-  ```
+You can find instructions for other cases both in the "Supported Systems" section below and in
+the [Building from source docs](http://www.openmathlib.org/OpenBLAS/docs/install).
+The `.yml` scripts included with the sources (which contain the
+build scripts for the "continuous integration" (CI) build tests automatically run on every proposed change to the sources) may also provide additional hints.
+
+When compiling for a more modern CPU target of the same architecture, e.g. `TARGET=SKYLAKEX` on a `HASWELL` host, option `CROSS=1` can be used to suppress the automatic invocation of the tests at the end of the build.
 
 ### Debug version
 
@@ -117,7 +131,7 @@ Use `PREFIX=` when invoking `make`, for example
 ```sh
 make install PREFIX=your_installation_directory
 ```
-
+(along with all options you added on the `make` command line in the preceding build step)
 The default installation directory is `/opt/OpenBLAS`.
 
 ## Supported CPUs and Operating Systems
@@ -137,7 +151,7 @@ Please read `GotoBLAS_01Readme.txt` for older CPU models already supported by th
 - **AMD Bulldozer**: x86-64 ?GEMM FMA4 kernels. (Thanks to Werner Saar)
 - **AMD PILEDRIVER**: Uses Bulldozer codes with some optimizations.
 - **AMD STEAMROLLER**: Uses Bulldozer codes with some optimizations.
-- **AMD ZEN**: Uses Haswell codes with some optimizations.
+- **AMD ZEN**: Uses Haswell codes with some optimizations for Zen 2/3 (use SkylakeX for Zen4)
 
 #### MIPS32
 
@@ -162,6 +176,7 @@ Please read `GotoBLAS_01Readme.txt` for older CPU models already supported by th
 - **Cortex A57**: Optimized Level-3 and Level-2 functions
 - **Cortex A72**: same as A57 ( different cpu specifications)
 - **Cortex A73**: same as A57 (different cpu specifications)
+- **Cortex A76**: same as A57 (different cpu specifications)
 - **Falkor**: same as A57 (different cpu specifications)
 - **ThunderX**: Optimized some Level-1 functions
 - **ThunderX2T99**: Optimized Level-3 BLAS and parts of Levels 1 and 2
@@ -169,13 +184,21 @@ Please read `GotoBLAS_01Readme.txt` for older CPU models already supported by th
 - **TSV110**: Optimized some Level-3 helper functions
 - **EMAG 8180**: preliminary support based on A57
 - **Neoverse N1**: (AWS Graviton2) preliminary support
-- **Apple Vortex**: preliminary support based on ARMV8
+- **Neoverse V1**: (AWS Graviton3) optimized Level-3 BLAS
+- **Apple Vortex**: preliminary support based on ThunderX2/3
+- **A64FX**:  preliminary support, optimized Level-3 BLAS
+- **ARMV8SVE**: any ARMV8 cpu with SVE extensions 
 
 #### PPC/PPC64
 
 - **POWER8**: Optimized BLAS, only for PPC64LE (Little Endian), only with `USE_OPENMP=1`
 - **POWER9**: Optimized Level-3 BLAS (real) and some Level-1,2. PPC64LE with OpenMP only. 
-- **POWER10**:
+- **POWER10**: Optimized Level-3 BLAS including SBGEMM and some Level-1,2.
+
+- **AIX**: Dynamic architecture with OpenXL and OpenMP.
+  ```sh
+  make CC=ibm-clang_r FC=xlf_r TARGET=POWER7 BINARY=64 USE_OPENMP=1 INTERFACE64=1 DYNAMIC_ARCH=1 USE_THREAD=1
+  ```
 
 #### IBM zEnterprise System
 
@@ -188,23 +211,66 @@ Please read `GotoBLAS_01Readme.txt` for older CPU models already supported by th
   ```sh
   make HOSTCC=gcc TARGET=C910V CC=riscv64-unknown-linux-gnu-gcc FC=riscv64-unknown-linux-gnu-gfortran
   ```
-  (also known to work on C906)
+  (also known to work on C906 as long as you use only single-precision functions - its instruction set support appears to be incomplete in double precision)
+
+- **x280**: Level-3 BLAS and Level-1,2 are optimized by RISC-V Vector extension 1.0.
+  ```sh
+  make HOSTCC=gcc TARGET=x280 NUM_THREADS=8 CC=riscv64-unknown-linux-gnu-clang FC=riscv64-unknown-linux-gnu-gfortran
+  ```
+
+- **ZVL???B**: Level-3 BLAS and Level-1,2 including vectorised kernels targeting generic RISCV cores with vector support with registers of at least the corresponding width; ZVL128B and ZVL256B are available.
+e.g.:
+  ```sh
+    make TARGET=RISCV64_ZVL256B CFLAGS="-DTARGET=RISCV64_ZVL256B" \
+    BINARY=64 ARCH=riscv64 CC='clang -target riscv64-unknown-linux-gnu' \
+    AR=riscv64-unknown-linux-gnu-ar AS=riscv64-unknown-linux-gnu-gcc \
+    LD=riscv64-unknown-linux-gnu-gcc FC=riscv64-unknown-linux-gnu-gfortran \
+    HOSTCC=gcc HOSTFC=gfortran -j
+  ```
+
+#### LOONGARCH64
+
+- **LA64_GENERIC**: Optimized Level-3, Level-2 and Level-1 BLAS with scalar instruction
+  ```sh
+  make HOSTCC=gcc TARGET=LA64_GENERIC CC=loongarch64-unknown-linux-gnu-gcc FC=loongarch64-unknown-linux-gnu-gfortran USE_SIMPLE_THREADED_LEVEL3=1
+  ```
+  The old-style TARGET=LOONGSONGENERIC is still supported
+
+- **LA264**: Optimized Level-3, Level-2 and Level-1 BLAS with LSX instruction
+  ```sh
+  make HOSTCC=gcc TARGET=LA264 CC=loongarch64-unknown-linux-gnu-gcc FC=loongarch64-unknown-linux-gnu-gfortran USE_SIMPLE_THREADED_LEVEL3=1
+  ```
+  The old-style TARGET=LOONGSON2K1000 is still supported
+
+- **LA464**: Optimized Level-3, Level-2 and Level-1 BLAS with LASX instruction
+  ```sh
+  make HOSTCC=gcc TARGET=LA464 CC=loongarch64-unknown-linux-gnu-gcc FC=loongarch64-unknown-linux-gnu-gfortran USE_SIMPLE_THREADED_LEVEL3=1
+  ```
+  The old-style TARGET=LOONGSON3R5 is still supported
 
 ### Support for multiple targets in a single library
 
 OpenBLAS can be built for multiple targets with runtime detection of the target cpu by specifiying `DYNAMIC_ARCH=1` in Makefile.rule, on the gmake command line or as `-DDYNAMIC_ARCH=TRUE` in cmake.
 
-For **x86_64**, the list of targets this activates contains Prescott, Core2, Nehalem, Barcelona, Sandybridge, Bulldozer, Piledriver, Steamroller, Excavator, Haswell, Zen, SkylakeX. For cpu generations not included in this list, the corresponding older model is used. If you also specify `DYNAMIC_OLDER=1`, specific support for Penryn, Dunnington, Opteron, Opteron/SSE3, Bobcat, Atom and Nano is added. Finally there is an option `DYNAMIC_LIST` that allows to specify an individual list of targets to include instead of the default.
+For **x86_64**, the list of targets this activates contains Prescott, Core2, Nehalem, Barcelona, Sandybridge, Bulldozer, Piledriver, Steamroller, Excavator, Haswell, Zen, SkylakeX, Cooper Lake, Sapphire Rapids. For cpu generations not included in this list, the corresponding older model is used. If you also specify `DYNAMIC_OLDER=1`, specific support for Penryn, Dunnington, Opteron, Opteron/SSE3, Bobcat, Atom and Nano is added. Finally there is an option `DYNAMIC_LIST` that allows to specify an individual list of targets to include instead of the default.
 
 `DYNAMIC_ARCH` is also supported on **x86**, where it translates to Katmai, Coppermine, Northwood, Prescott, Banias,
 Core2, Penryn, Dunnington, Nehalem, Athlon, Opteron, Opteron_SSE3, Barcelona, Bobcat, Atom and Nano.
 
-On **ARMV8**, it enables support for CortexA53, CortexA57, CortexA72, CortexA73, Falkor, ThunderX, ThunderX2T99, TSV110 as well as generic ARMV8 cpus.
+On **ARMV8**, it enables support for CortexA53, CortexA57, CortexA72, CortexA73, Falkor, ThunderX, ThunderX2T99, TSV110 as well as generic ARMV8 cpus. If compiler support for SVE is available at build time, support for NeoverseN2, NeoverseV1 as well as generic ArmV8SVE targets is also enabled.
 
-For **POWER**, the list encompasses POWER6, POWER8 and POWER9, on **ZARCH** it comprises Z13 and Z14.
+For **POWER**, the list encompasses POWER6, POWER8 and POWER9. POWER10 is additionally available if a sufficiently recent compiler is used for the build.
 
-The `TARGET` option can be used in conjunction with `DYNAMIC_ARCH=1` to specify which cpu model should be assumed for all the
-common code in the library, usually you will want to set this to the oldest model you expect to encounter.
+on **ZARCH** it comprises Z13 and Z14 as well as generic zarch support.
+
+On **riscv64**, DYNAMIC_ARCH enables support for riscv64_zvl128b and riscv64_zvl256b in addition to generic riscv64 support.  A compiler that supports RVV 1.0 is required to build OpenBLAS for riscv64 when DYNAMIC_ARCH is enabled.
+
+On **LoongArch64**, it comprises LA264 and LA464 as well as generic LoongArch64 support.
+
+The `TARGET` option can - and usually **should** - be used in conjunction with `DYNAMIC_ARCH=1` to specify which cpu model should be assumed for all the common code in the library, usually you will want to set this to the oldest model you expect to encounter.
+Failure to specify this may lead to advanced instructions being used by the compiler, just because the build host happens to support them. This is most likely to happen when aggressive optimization options are in effect, and the resulting library may then crash with an
+illegal instruction error on weaker hardware, before it even reaches the BLAS routines specifically included for that cpu.
+
 Please note that it is not possible to combine support for different architectures, so no combined 32 and 64 bit or x86_64 and arm64 in the same library.
 
 ### Supported OS
@@ -217,7 +283,7 @@ Please note that it is not possible to combine support for different architectur
 - **NetBSD**: Supported by the community. We don't actively test the library on this OS.
 - **DragonFly BSD**: Supported by the community. We don't actively test the library on this OS.
 - **Android**: Supported by the community. Please read <https://github.com/xianyi/OpenBLAS/wiki/How-to-build-OpenBLAS-for-Android>.
-- **AIX**: Supported on PPC up to POWER8
+- **AIX**: Supported on PPC up to POWER10
 - **Haiku**: Supported by the community. We don't actively test the library on this OS.
 - **SunOS**: Supported by the community. We don't actively test the library on this OS.
 - **Cortex-M**: Supported by the community. Please read <https://github.com/xianyi/OpenBLAS/wiki/How-to-use-OpenBLAS-on-Cortex-M>.
@@ -258,24 +324,28 @@ If you compile this library with `USE_OPENMP=1`, you should use the above functi
 
 ## Reporting bugs
 
-Please submit an issue in https://github.com/xianyi/OpenBLAS/issues.
+Please submit an issue in https://github.com/OpenMathLib/OpenBLAS/issues.
 
 ## Contact
 
++ Use github discussions: https://github.com/OpenMathLib/OpenBLAS/discussions
 * OpenBLAS users mailing list: https://groups.google.com/forum/#!forum/openblas-users
 * OpenBLAS developers mailing list: https://groups.google.com/forum/#!forum/openblas-dev
 
 ## Change log
 
-Please see Changelog.txt to view the differences between OpenBLAS and GotoBLAS2 1.13 BSD version.
+Please see Changelog.txt.
 
 ## Troubleshooting
 
-* Please read the [FAQ](https://github.com/xianyi/OpenBLAS/wiki/Faq) first.
+* Please read the [FAQ](http://www.openmathlib.org/OpenBLAS/docs/faq) section of the docs first.
 * Please use GCC version 4.6 and above to compile Sandy Bridge AVX kernels on Linux/MinGW/BSD.
 * Please use Clang version 3.1 and above to compile the library on Sandy Bridge microarchitecture.
   Clang 3.0 will generate the wrong AVX binary code.
-* Please use GCC version 6 or LLVM version 6 and above to compile Skylake AVX512 kernels.
+* Please use GCC version 6 or LLVM version 6 and above to compile Skylake/CooperLake AVX512 kernels
+* Please use LLVM version 18 and above (version 19 and above on Windows) if you plan to use
+  its new flang compiler for Fortran
+* Please use GCC version 11 and above to compile OpenBLAS on the POWER architecture
 * The number of CPUs/cores should be less than or equal to 256. On Linux `x86_64` (`amd64`),
   there is experimental support for up to 1024 CPUs/cores and 128 numa nodes if you build
   the library with `BIGNUMA=1`.
@@ -288,12 +358,12 @@ Please see Changelog.txt to view the differences between OpenBLAS and GotoBLAS2 
 
 ## Contributing
 
-1. [Check for open issues](https://github.com/xianyi/OpenBLAS/issues) or open a fresh issue
+1. [Check for open issues](https://github.com/OpenMathLib/OpenBLAS/issues) or open a fresh issue
    to start a discussion around a feature idea or a bug.
-2. Fork the [OpenBLAS](https://github.com/xianyi/OpenBLAS) repository to start making your changes.
+2. Fork the [OpenBLAS](https://github.com/OpenMathLib/OpenBLAS) repository to start making your changes.
 3. Write a test which shows that the bug was fixed or that the feature works as expected.
 4. Send a pull request. Make sure to add yourself to `CONTRIBUTORS.md`.
 
 ## Donation
 
-Please read [this wiki page](https://github.com/xianyi/OpenBLAS/wiki/Donation).
+Please see [the donations section](http://www.openmathlib.org/OpenBLAS/docs/about/#donations) in the docs.

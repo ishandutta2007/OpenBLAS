@@ -1527,14 +1527,29 @@ int get_cpuname(void){
       break;
       case 10: //family 6 exmodel 10
         switch (model) {
+	  case 13: // Granite Rapids
+	  if(support_amx_bf16())
+	    return CPUTYPE_SAPPHIRERAPIDS;
+	  if(support_avx512_bf16())
+            return CPUTYPE_COOPERLAKE;	
+          if(support_avx512())
+            return CPUTYPE_SKYLAKEX;
+          if(support_avx2())
+            return CPUTYPE_HASWELL;
+          if(support_avx())
+            return CPUTYPE_SANDYBRIDGE;
+          else
+          return CPUTYPE_NEHALEM;
           case 5: // Comet Lake H and S
           case 6: // Comet Lake U
+	  case 10: // Meteor Lake
             if(support_avx2())
               return CPUTYPE_HASWELL;
             if(support_avx())
               return CPUTYPE_SANDYBRIDGE;
             else
               return CPUTYPE_NEHALEM;
+	  case 0: // Meteor Lake
           case 7: // Rocket Lake           
 	    if(support_avx512())
               return CPUTYPE_SKYLAKEX;
@@ -1560,6 +1575,19 @@ int get_cpuname(void){
 	      return CPUTYPE_NEHALEM;
         }
         break;
+      case 12: //family 6 exmodel 12
+	switch (model) {
+	  case 15:
+	    if(support_avx512())
+              return CPUTYPE_SAPPHIRERAPIDS;
+            if(support_avx2())
+              return CPUTYPE_HASWELL;
+            if(support_avx())
+	      return CPUTYPE_SANDYBRIDGE;
+	    else
+	    return CPUTYPE_NEHALEM;
+	  }
+	break;
       }
       break;    
     case 0x7:
@@ -1660,7 +1688,14 @@ int get_cpuname(void){
 	  else
 	    return CPUTYPE_BARCELONA;
         }
-      case 10: // Zen3		      
+      case 10: // Zen3/4
+      case 11: // Zen5
+#ifndef NO_AVX512
+          if(support_avx512_bf16())
+            return CPUTYPE_COOPERLAKE;
+          if(support_avx512())
+            return CPUTYPE_SKYLAKEX;
+#endif
 	if(support_avx())
 #ifndef NO_AVX2
 	    return CPUTYPE_ZEN;
@@ -2331,8 +2366,22 @@ int get_coretype(void){
 
       case 10:
         switch (model) {
+	  case 13: // Granite Rapids
+	  if(support_amx_bf16())
+	    return CORE_SAPPHIRERAPIDS;
+	  if(support_avx512_bf16())
+            return CORE_COOPERLAKE;	
+          if(support_avx512())
+            return CORE_SKYLAKEX;
+          if(support_avx2())
+            return CORE_HASWELL;
+          if(support_avx())
+	    return CORE_SANDYBRIDGE;
+	  else
+	    return CORE_NEHALEM;
 	  case 5: // Comet Lake H and S
     	  case 6: // Comet Lake U
+	  case 10: // Meteor Lake
             if(support_avx())
   #ifndef NO_AVX2
               return CORE_HASWELL;
@@ -2341,6 +2390,7 @@ int get_coretype(void){
   #endif
             else
               return CORE_NEHALEM;
+	  case 0: // Meteor Lake
 	  case 7:// Rocket Lake
 #ifndef NO_AVX512
 	  if(support_avx512())
@@ -2371,10 +2421,10 @@ int get_coretype(void){
 	  else
 	  return CORE_NEHALEM;
 	}
-      case 15:
-	if (model <= 0x2) return CORE_NORTHWOOD;
-	else return CORE_PRESCOTT;
       }
+    case 15:
+      if (model <= 0x2) return CORE_NORTHWOOD;
+      else return CORE_PRESCOTT;
     }
   }
 
@@ -2430,7 +2480,7 @@ int get_coretype(void){
 	  }
 	  break;
 	}
-      } else if (exfamily == 8 || exfamily == 10) {
+      } else if (exfamily == 8 || exfamily == 10 || exfamily == 11) {
 	switch (model) {
 	case 1:
 	  // AMD Ryzen
@@ -2438,6 +2488,12 @@ int get_coretype(void){
 	  // Ryzen 2
 	default:
 	  // Matisse,Renoir Ryzen2 models		
+#ifndef NO_AVX512
+          if(support_avx512_bf16())
+            return CORE_COOPERLAKE;
+          if(support_avx512())
+            return CORE_SKYLAKEX;
+#endif
 	  if(support_avx())
 #ifndef NO_AVX2
 	    return CORE_ZEN;
@@ -2499,6 +2555,7 @@ int get_coretype(void){
       case 0x7:
         switch (exmodel) {
         case 5:
+	case 6:
           if (support_avx2())
             return CORE_ZEN;
           else
